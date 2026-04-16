@@ -161,11 +161,13 @@ def train_xray(data_dir: str = CFG.xray_data_dir):
             optimizer.step()
             total_loss += loss.item()
         scheduler.step()
+        
+        # Print loss every epoch so the user sees progress!
+        print(f"Epoch {epoch:3d} | Train Loss: {total_loss/len(t_dl):.4f}")
 
         if epoch % 5 == 0:
             auc = evaluate_xray(model, v_dl)
-            print(f"Epoch {epoch:3d} | loss={total_loss/len(t_dl):.4f} "
-                  f"| val mean-AUC={auc:.4f}")
+            print(f"  --> val mean-AUC={auc:.4f}")
             if auc > best_auc:
                 best_auc = auc
                 torch.save(model.state_dict(),
