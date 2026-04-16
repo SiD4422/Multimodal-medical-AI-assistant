@@ -3,3 +3,8 @@ __pycache__/
 .env
 .venv/
 venv/
+data/
+checkpoints/
+logs/
+*.html
+*_files/

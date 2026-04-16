@@ -1,114 +1,118 @@
-# Drug Repurposing with Graph Neural Networks
+# Multimodal Medical AI — Diagnostic Screening System
 
-> Predicting new uses for existing drugs using a Relational GCN trained on the Hetionet biomedical knowledge graph.
+> Three deep learning modules covering Chest, Eye, and Skin diagnosis — fused with an LLM clinical report generator.
 
 ---
 
 ## What this project does
 
-Models drugs, diseases, genes, and proteins as nodes in a **biomedical knowledge graph** (Hetionet). A heterogeneous GNN learns to predict which approved drugs could treat diseases they weren't originally designed for — essentially a recommendation system backed by real biology.
+A unified AI diagnostic system that accepts medical images across 3 domains and produces structured clinical reports:
 
----
-
-## Architecture
-
-```
-Hetionet (47K nodes, 2.25M edges)
-  └─ Node features (Morgan fingerprints for drugs, learned embeddings for others)
-       └─ R-GCN encoder (3 heterogeneous GCN layers with residual connections)
-            └─ Link predictor MLP
-                 └─ Ranked drug list per disease + biological explanation paths
-```
+| Module | Input | Model | Task |
+|--------|-------|-------|------|
+| Chest  | X-ray image + ECG signal | DenseNet-121 + 1D-CNN Transformer | 14 pathologies + 5 rhythm classes |
+| Eye    | Retinal fundus photo | EfficientNet-B4 + B2 | DR grading (0–4) + glaucoma risk |
+| Skin   | Lesion photo + age/sex/site | EfficientNet-B4 + MLP fusion | 7-class lesion + malignancy flag |
 
 ---
 
 ## Quick start
 
-### 1. Install dependencies
-
+### 1. Install
 ```bash
-pip install torch torch-geometric
 pip install -r requirements.txt
 ```
 
-> Note: Install PyTorch first, then torch-geometric. See https://pytorch-geometric.readthedocs.io/en/latest/install/installation.html
+### 2. Get data (free)
 
-### 2. Run in order
+| Dataset | How |
+|---------|-----|
+| NIH ChestX-ray14 | [nih.gov](https://nihcc.app.box.com/v/ChestXray-NIHCC) → `data/chest_xray/` |
+| PTB-XL ECG | [physionet.org/ptb-xl](https://physionet.org/content/ptb-xl/) → `data/ptbxl/` |
+| APTOS 2019 | [kaggle.com/c/aptos2019](https://www.kaggle.com/c/aptos2019-blindness-detection) → `data/aptos/` |
+| RIM-ONE DL | [rimone.retinaanalysis.org](http://rimone.retinaanalysis.org) → `data/rim_one/` |
+| ISIC 2020 | [kaggle.com/c/siim-isic](https://www.kaggle.com/c/siim-isic-melanoma-classification) → `data/isic2020/` |
 
+### 3. Train
 ```bash
-python 1_data_setup.py     # Download Hetionet, build graph
-python 2_features.py       # Add molecular fingerprints
-python 3_model.py          # Verify model architecture
-python 4_train.py          # Train the GNN (200 epochs)
-python 5_explain.py        # Generate explanation paths
-streamlit run 6_app.py     # Launch interactive web app
-uvicorn 7_api:app --reload # (Optional) REST API
+python train_all.py --module all     # all 3 modules
+python train_all.py --module chest   # just chest
+python train_all.py --module eye     # just eye
+python train_all.py --module skin    # just skin
 ```
 
----
+### 4. Launch app
+```bash
+streamlit run app.py
+```
 
-## Datasets
-
-| Dataset | How to get it |
-|---------|--------------|
-| **Hetionet** | Auto-downloaded by `1_data_setup.py` |
-| **DrugBank** | Free academic registration at https://go.drugbank.com — download `drugbank_approved.csv` to `data/` |
-| **DisGeNET** | https://www.disgenet.org — for validation |
-| **ClinicalTrials.gov** | https://clinicaltrials.gov — manual cross-check |
+### 5. Enable LLM reports (optional)
+```bash
+export ANTHROPIC_API_KEY=your_key_here
+```
 
 ---
 
 ## Project structure
 
 ```
-drug_repurposing_gnn/
-├── 1_data_setup.py     # Download + parse Hetionet → HeteroData
-├── 2_features.py       # Morgan fingerprints + node embeddings
-├── 3_model.py          # R-GCN encoder + link predictor
-├── 4_train.py          # Training loop + evaluation (AUC, Hits@K, MRR)
-├── 5_explain.py        # GNNExplainer + biological path analysis
-├── 6_app.py            # Streamlit interactive demo
-├── 7_api.py            # FastAPI REST API
+multimodal_medical_ai/
+├── config.py             # Central config for all modules
+├── utils.py              # Shared transforms, GradCAM, metrics
+├── module1_chest.py      # X-ray DenseNet + ECG 1D-CNN + fusion
+├── module2_eye.py        # DR EfficientNet-B4 + Glaucoma B2 + fusion
+├── module3_skin.py       # Skin EfficientNet-B4 + metadata MLP
+├── report_generator.py   # Claude API → structured clinical reports
+├── train_all.py          # Master training script
+├── app.py                # Streamlit app (all 3 modules)
 ├── requirements.txt
-├── data/               # Auto-created, stores downloaded data
-└── checkpoints/        # Saved model + training history
+├── data/                 # Downloaded datasets (gitignored)
+└── checkpoints/          # Saved model weights
 ```
 
 ---
 
-## Key metrics to target
+## Target metrics
 
-| Metric | Baseline (GCN) | Target (R-GCN) |
-|--------|----------------|----------------|
-| ROC-AUC | ~0.85 | ~0.92+ |
-| Hits@10 | ~0.30 | ~0.50+ |
-| Hits@50 | ~0.55 | ~0.72+ |
-| MRR | ~0.15 | ~0.28+ |
+| Module | Metric | Target |
+|--------|--------|--------|
+| X-ray | Mean AUC (14 labels) | ≥ 0.85 |
+| ECG | 5-class accuracy | ≥ 0.88 |
+| DR grading | Quadratic Weighted Kappa | ≥ 0.85 |
+| Glaucoma | ROC-AUC | ≥ 0.92 |
+| Skin | Macro AUC (7-class) | ≥ 0.90 |
 
 ---
 
-## What makes this stand out
+## Key technical highlights
 
-1. **Heterogeneous graph reasoning** — not flat tabular ML
-2. **Real molecular features** — Morgan fingerprints from RDKit
-3. **Biological interpretability** — shared gene paths explain every prediction
-4. **Full deployment** — Streamlit app + FastAPI, ready for Hugging Face Spaces
-5. **Validation hook** — cross-check predictions against ClinicalTrials.gov
+1. **Ben Graham preprocessing** on fundus images (removes vignette, boosts contrast)
+2. **Two-phase DR training**: regression first (ordinal-aware), then classification
+3. **Metadata fusion** for skin: image + patient demographics = better malignancy detection
+4. **Weighted sampling** for imbalanced skin lesion classes
+5. **Grad-CAM overlays** on every image prediction
+6. **Missing modality handling** — each module works independently
+7. **LLM report generation** — predictions → structured clinical language via Claude API
 
 ---
 
 ## Deployment on Hugging Face Spaces
 
-1. Create a new Space (Streamlit SDK)
+```
+1. Create new Space → SDK: Streamlit
 2. Push this repo
-3. Add `requirements.txt`
-4. Done — Spaces auto-runs `streamlit run 6_app.py`
+3. Add ANTHROPIC_API_KEY as a Space secret
+4. Add requirements.txt
+5. Space auto-runs: streamlit run app.py
+```
 
 ---
 
 ## References
 
-- Hetionet: https://het.io
-- PyTorch Geometric: https://pytorch-geometric.readthedocs.io
-- Himmelstein et al. (2017) — "Systematic integration of biomedical knowledge" *eLife*
-- Schlichtkrull et al. (2018) — "Modeling Relational Data with Graph Convolutional Networks"
+- Wang et al. (2017) — ChestX-ray8, NIH
+- Wagner et al. (2020) — PTB-XL ECG dataset
+- APTOS 2019 Blindness Detection, Kaggle
+- Tschandl et al. (2018) — HAM10000 dermatoscopy dataset
+- Tan & Le (2019) — EfficientNet
+- Huang et al. (2017) — DenseNet (CheXNet)
