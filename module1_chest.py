@@ -209,10 +209,11 @@ class PTBXLDataset(Dataset):
             scp_statements.csv
     """
     def __init__(self, df: pd.DataFrame, data_dir: str,
-                 sampling_rate: int = 100):
+                 sampling_rate: int = 100, is_train: bool = False):
         self.df           = df.reset_index(drop=True)
         self.data_dir     = data_dir
         self.sampling_rate= sampling_rate
+        self.is_train     = is_train
 
     def __len__(self):
         return len(self.df)
@@ -225,6 +226,8 @@ class PTBXLDataset(Dataset):
         signal, _= wfdb.rdsamp(path)            # (1000, 12)
         signal   = normalise_ecg(signal.T)       # (12, 1000)
         signal   = torch.tensor(signal, dtype=torch.float32)
+        if self.is_train:
+            signal += torch.randn_like(signal) * 0.05
         label    = torch.tensor(int(row["label"]), dtype=torch.long)
         return signal, label
 
@@ -313,7 +316,7 @@ class ECGEncoder(nn.Module):
 def train_ecg(data_dir: str = CFG.ecg_data_dir):
     train_df, val_df, _ = load_ptbxl_dataframes(data_dir)
 
-    t_ds = PTBXLDataset(train_df, data_dir)
+    t_ds = PTBXLDataset(train_df, data_dir, is_train=True)
     v_ds = PTBXLDataset(val_df,   data_dir)
     t_dl = DataLoader(t_ds, batch_size=CFG.batch_size,
                       shuffle=True,  num_workers=4)
@@ -322,6 +325,7 @@ def train_ecg(data_dir: str = CFG.ecg_data_dir):
 
     model     = ECGEncoder().to(DEVICE)
     optimizer = torch.optim.AdamW(model.parameters(), lr=CFG.lr)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=CFG.epochs)
     criterion = nn.CrossEntropyLoss()
 
     best_acc = 0.0
@@ -333,12 +337,13 @@ def train_ecg(data_dir: str = CFG.ecg_data_dir):
             loss = criterion(model(sigs), labels)
             loss.backward()
             optimizer.step()
+        scheduler.step()
 
         if epoch % 5 == 0:
-            acc = evaluate_ecg(model, v_dl)
-            print(f"ECG Epoch {epoch:3d} | val acc={acc:.4f}")
-            if acc > best_acc:
-                best_acc = acc
+            auc = evaluate_ecg(model, v_dl)
+            print(f"ECG Epoch {epoch:3d} | val AUC={auc:.4f}")
+            if auc > best_acc:
+                best_acc = auc
                 torch.save(model.state_dict(), "checkpoints/ecg_best.pt")
 
     return model
@@ -346,14 +351,24 @@ def train_ecg(data_dir: str = CFG.ecg_data_dir):
 
 @torch.no_grad()
 def evaluate_ecg(model, loader):
+    from sklearn.metrics import roc_auc_score
     model.eval()
-    correct = total = 0
+    all_preds, all_labels = [], []
     for sigs, labels in loader:
         sigs   = sigs.to(DEVICE)
-        preds  = model(sigs).argmax(dim=1).cpu()
-        correct += (preds == labels).sum().item()
-        total   += len(labels)
-    return correct / total
+        preds  = F.softmax(model(sigs), dim=1).cpu()
+        all_preds.append(preds.numpy())
+        all_labels.append(labels.numpy())
+    
+    y_true = np.concatenate(all_labels)
+    y_pred = np.concatenate(all_preds)
+    
+    try:
+        auc = roc_auc_score(y_true, y_pred, multi_class='ovr', average='macro')
+    except ValueError:
+        auc = (np.argmax(y_pred, axis=1) == y_true).mean()
+        
+    return auc
 
 
 # ════════════════════════════════════════════════════════════════════════════
