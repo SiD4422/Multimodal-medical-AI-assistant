@@ -85,7 +85,7 @@ class APTOSDataset(Dataset):
             img = ben_graham_preprocess(img, CFG.dr_img_size)
         if self.transform:
             img = self.transform(img)
-        label = torch.tensor(int(row["diagnosis"]), dtype=torch.long)
+        label = torch.tensor(int(row["label"]), dtype=torch.long)
         return img, label
 
 
