@@ -188,10 +188,10 @@ def train_dr(data_dir: str = CFG.dr_data_dir):
             scheduler.step()
 
         if epoch % 5 == 0:
-            kappa = evaluate_dr(model, v_dl)
-            print(f"DR Epoch {epoch:3d} | QWK={kappa:.4f}")
-            if kappa > best:
-                best = kappa
+            auc = evaluate_dr(model, v_dl)
+            print(f"DR Epoch {epoch:3d} | val AUC={auc:.4f}")
+            if auc > best:
+                best = auc
                 torch.save(model.state_dict(),
                            "checkpoints/dr_best.pt")
                 print("  ✓ Saved best DR model")
@@ -200,15 +200,24 @@ def train_dr(data_dir: str = CFG.dr_data_dir):
 
 @torch.no_grad()
 def evaluate_dr(model, loader):
-    """Quadratic Weighted Kappa — the official APTOS metric."""
+    from sklearn.metrics import roc_auc_score
     model.eval()
     all_labels, all_preds = [], []
     for imgs, labels in loader:
-        imgs  = imgs.to(DEVICE)
-        preds = model(imgs).argmax(dim=1).cpu().numpy()
-        all_preds.extend(preds)
-        all_labels.extend(labels.numpy())
-    return cohen_kappa_score(all_labels, all_preds, weights="quadratic")
+        imgs   = imgs.to(DEVICE)
+        preds  = F.softmax(model(imgs), dim=1).cpu().numpy()
+        all_preds.append(preds)
+        all_labels.append(labels.numpy())
+    
+    y_true = np.concatenate(all_labels)
+    y_pred = np.concatenate(all_preds)
+    
+    try:
+        auc = roc_auc_score(y_true, y_pred, multi_class='ovr', average='macro')
+    except ValueError:
+        auc = (np.argmax(y_pred, axis=1) == y_true).mean()
+        
+    return auc
 
 
 # ── TTA inference ──────────────────────────────────────────────────────────
@@ -325,10 +334,11 @@ def train_glaucoma(data_dir: str = CFG.glaucoma_data_dir):
 
     model     = GlaucomaEncoder().to(DEVICE)
     optimizer = torch.optim.AdamW(model.parameters(), lr=3e-5)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=40)
     criterion = nn.BCEWithLogitsLoss()
 
     best_auc = 0.0
-    for epoch in range(1, 31):
+    for epoch in range(1, 41):
         model.train()
         for imgs, labels in t_dl:
             imgs   = imgs.to(DEVICE)
@@ -337,6 +347,7 @@ def train_glaucoma(data_dir: str = CFG.glaucoma_data_dir):
             loss = criterion(model(imgs), labels)
             loss.backward()
             optimizer.step()
+        scheduler.step()
 
         if epoch % 5 == 0:
             auc = evaluate_glaucoma(model, v_dl)
