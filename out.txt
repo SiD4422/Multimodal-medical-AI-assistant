@@ -1,0 +1,10 @@
+162:     xray_model, ecg_model = load_chest()
+175:             with torch.no_grad():
+177:                     xray_model(img_t.unsqueeze(0).to(DEVICE))
+190:                     gc   = GradCAM(xray_model, xray_model.features[-1])
+229:             with torch.no_grad():
+278:     dr_model, glc_model = load_eye()
+294:             with torch.no_grad():
+295:                 dr_probs  = F.softmax(dr_model(inp), dim=1).cpu().numpy()[0]
+395:             with torch.no_grad():
+397:                     model(img_t.unsqueeze(0).to(DEVICE), meta_t),
