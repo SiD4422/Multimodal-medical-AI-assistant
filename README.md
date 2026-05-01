@@ -1,39 +1,46 @@
-# Multimodal Medical AI — Diagnostic Screening System
+# 🏥 Multimodal Medical AI — Diagnostic Screening System
 
-> Three deep learning modules covering Chest, Eye, and Skin diagnosis — fused with an LLM clinical report generator.
+[![Python](https://img.shields.io/badge/python-3.8%2B-blue?style=for-the-badge&logo=python)](https://www.python.org)
+[![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org)
+[![TensorFlow](https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)](https://tensorflow.org)
+[![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io)
+[![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/SiD4422/Multimodal-medical-AI-assistant?style=for-the-badge)](https://github.com/SiD4422/Multimodal-medical-AI-assistant/stargazers)
+
+> **Three deep learning modules** covering Chest, Eye, and Skin diagnosis — fused with an **LLM clinical report generator**. 🚀
 
 ---
 
-## What this project does
+## 🎯 What This Project Does
 
-A unified AI diagnostic system that accepts medical images across 3 domains and produces structured clinical reports:
+A unified **AI diagnostic system** that accepts medical images across 3 domains and produces structured clinical reports:
 
 | Module | Input | Model | Task |
 |--------|-------|-------|------|
-| Chest  | X-ray image + ECG signal | DenseNet-121 + 1D-CNN Transformer | 14 pathologies + 5 rhythm classes |
-| Eye    | Retinal fundus photo | EfficientNet-B4 + B2 | DR grading (0–4) + glaucoma risk |
-| Skin   | Lesion photo + age/sex/site | EfficientNet-B4 + MLP fusion | 7-class lesion + malignancy flag |
+| 🫀 **Chest** | X-ray image + ECG signal | DenseNet-121 + 1D-CNN Transformer | 14 pathologies + 5 rhythm classes |
+| 👁️ **Eye** | Retinal fundus photo | EfficientNet-B4 + B2 | DR grading (0–4) + glaucoma risk |
+| 🩹 **Skin** | Lesion photo + age/sex/site | EfficientNet-B4 + MLP fusion | 7-class lesion + malignancy flag |
 
 ---
 
-## Quick start
+## 🚀 Quick Start
 
-### 1. Install
+### 1️⃣ Install
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Get data (free)
+### 2️⃣ Get Data (Free)
 
-| Dataset | How |
-|---------|-----|
-| NIH ChestX-ray14 | [nih.gov](https://nihcc.app.box.com/v/ChestXray-NIHCC) → `data/chest_xray/` |
-| PTB-XL ECG | [physionet.org/ptb-xl](https://physionet.org/content/ptb-xl/) → `data/ptbxl/` |
-| APTOS 2019 | [kaggle.com/c/aptos2019](https://www.kaggle.com/c/aptos2019-blindness-detection) → `data/aptos/` |
-| RIM-ONE DL | [rimone.retinaanalysis.org](http://rimone.retinaanalysis.org) → `data/rim_one/` |
-| ISIC 2020 | [kaggle.com/c/siim-isic](https://www.kaggle.com/c/siim-isic-melanoma-classification) → `data/isic2020/` |
+| Dataset | Link |
+|---------|------|
+| 🫀 NIH ChestX-ray14 | [nih.gov](https://nihcc.app.box.com/v/ChestXray-NIHCC) → `data/chest_xray/` |
+| 📊 PTB-XL ECG | [physionet.org](https://physionet.org/content/ptb-xl/) → `data/ptbxl/` |
+| 👁️ APTOS 2019 | [kaggle.com](https://www.kaggle.com/c/aptos2019-blindness-detection) → `data/aptos/` |
+| 🔍 RIM-ONE DL | [rimone.retinaanalysis.org](http://rimone.retinaanalysis.org) → `data/rim_one/` |
+| 🩹 ISIC 2020 | [kaggle.com](https://www.kaggle.com/c/siim-isic-melanoma-classification) → `data/isic2020/` |
 
-### 3. Train
+### 3️⃣ Train
 ```bash
 python train_all.py --module all     # all 3 modules
 python train_all.py --module chest   # just chest
@@ -41,19 +48,19 @@ python train_all.py --module eye     # just eye
 python train_all.py --module skin    # just skin
 ```
 
-### 4. Launch app
+### 4️⃣ Launch App
 ```bash
 streamlit run app.py
 ```
 
-### 5. Enable LLM reports (optional)
+### 5️⃣ Enable LLM Reports (Optional)
 ```bash
 export ANTHROPIC_API_KEY=your_key_here
 ```
 
 ---
 
-## Project structure
+## 📁 Project Structure
 
 ```
 multimodal_medical_ai/
@@ -72,19 +79,19 @@ multimodal_medical_ai/
 
 ---
 
-## Target metrics
+## 📊 Target Metrics
 
 | Module | Metric | Target |
 |--------|--------|--------|
-| X-ray | Mean AUC (14 labels) | ≥ 0.85 |
-| ECG | 5-class accuracy | ≥ 0.88 |
-| DR grading | Quadratic Weighted Kappa | ≥ 0.85 |
-| Glaucoma | ROC-AUC | ≥ 0.92 |
-| Skin | Macro AUC (7-class) | ≥ 0.90 |
+| 🫀 X-ray | Mean AUC (14 labels) | ≥ 0.85 |
+| 📊 ECG | 5-class accuracy | ≥ 0.88 |
+| 👁️ DR grading | Quadratic Weighted Kappa | ≥ 0.85 |
+| 🔍 Glaucoma | ROC-AUC | ≥ 0.92 |
+| 🩹 Skin | Macro AUC (7-class) | ≥ 0.90 |
 
 ---
 
-## Key technical highlights
+## ⚡ Key Technical Highlights
 
 1. **Ben Graham preprocessing** on fundus images (removes vignette, boosts contrast)
 2. **Two-phase DR training**: regression first (ordinal-aware), then classification
@@ -96,7 +103,7 @@ multimodal_medical_ai/
 
 ---
 
-## Deployment on Hugging Face Spaces
+## 🌐 Deployment on Hugging Face Spaces
 
 ```
 1. Create new Space → SDK: Streamlit
@@ -108,7 +115,7 @@ multimodal_medical_ai/
 
 ---
 
-## References
+## 📚 References
 
 - Wang et al. (2017) — ChestX-ray8, NIH
 - Wagner et al. (2020) — PTB-XL ECG dataset
@@ -116,3 +123,17 @@ multimodal_medical_ai/
 - Tschandl et al. (2018) — HAM10000 dermatoscopy dataset
 - Tan & Le (2019) — EfficientNet
 - Huang et al. (2017) — DenseNet (CheXNet)
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please feel free to submit issues and pull requests.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+**Made with ❤️ by [SiD4422](https://github.com/SiD4422)**
